@@ -1,5 +1,5 @@
 # BoardGame
-Arduino Board Game: Pyramid's Secrets
+Arduino Board Game: Pyramid's Secret
 <br>
 Egypt-themed board game powered by an Arduino Nano, that controls the roulette wheel leds, push buttons, sound player (voices and music), LCD display, etc.
 
