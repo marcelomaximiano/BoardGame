@@ -54,7 +54,13 @@ int encoderValue = 1;
 int lastEncoded = LOW;
 
 // ***** Sound Volume
-int soundVolume = 0;  // max 31
+int soundVolume = 20;  // max 31
+
+// ***** Sound Track
+#define soundTrackStart 52
+#define soundTrackEnd   58
+int soundTrack = soundTrackStart;
+
 
 // ***** Acentos para mensagens gerais
 char strAccents[11] = "          ";
@@ -86,6 +92,10 @@ void setup()
   initButton(snakeStart);
   initButton(snakeEnd);
 
+  // toca o som de introduçao
+  getSoundVolume();
+  soundPlay(48);
+  
   // Switch on the backlight
   pinMode (BACKLIGHT_PIN, OUTPUT);
   digitalWrite(BACKLIGHT_PIN, HIGH);
@@ -137,6 +147,9 @@ void loop()
 {
   unsigned long currentMillis = millis();
 
+  // toca o som Numero de Jogadores
+  soundPlay(49);
+  
   // numero de jogadores
   ligaLed(ledButtonA, true);
   ligaLed(ledButtonB, true);
@@ -207,6 +220,9 @@ void displayPressToBegin() {
   ligaLed(ledButtonB, false);
   ligaLed(ledButtonC, false);
 
+  // toca o som Pressione C para iniciar
+  soundPlay(50);
+
   lcd.clear();
   lcd.setCursor(0, 0);
   displayRomStr(10060);     // Pressione C para
@@ -226,6 +242,10 @@ void game() {
   }
   currentPlayer = 0;
   gameOver = false;
+
+  // toca a musica de abertura
+  soundTrack = soundTrackStart;
+  soundPlay(soundTrack);
 
   while (true)
   {
@@ -325,6 +345,8 @@ void game() {
 
           if (playersPos[currentPlayer] == 55) {
             delay(2000);
+            // toca a musica final
+            soundPlay(64);
             lcd.clear();
             lcd.setCursor(0, 0);
             displayRomStr(10280);     // Parabens!!!
@@ -361,6 +383,9 @@ void game() {
 void snake(int time) {
   loadChars(strAccents);
 
+  // toca o som de introduçao
+  soundPlay(60);
+  
   turnOffAllLeds();
   ligaLed(ledSnakeGreen, true);
 
@@ -423,6 +448,9 @@ void snake(int time) {
     }
   }
 
+  // toca a trilha da cobra
+  soundPlay(61);
+
   lcd.clear();
   lcd.setCursor(0, 0);
   displayRomStr(10760);     // Não encoste
@@ -439,6 +467,8 @@ void snake(int time) {
     buttonPressed = getButton();
 
     if (buttonPressed == evtS2Press) {
+      // toca a trilha da cobra exito
+      soundPlay(62);
       playersPos[currentPlayer] = playersPos[currentPlayer] + 1;
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -452,6 +482,8 @@ void snake(int time) {
     }
 
     if ((buttonPressed == evtSW) || (time < 0)) {
+      // toca o som da mordida da cobra
+      soundPlay(63);
       playersPos[currentPlayer] = playersPos[currentPlayer] - 1;
       ligaLed(ledSnakeRed, true);
       ligaLed(ledSnakeGreen, false);
@@ -475,6 +507,13 @@ void snake(int time) {
 
   waitConfirm(3000);
   turnOffAllLeds();
+
+  // toca a proxima musica
+  soundTrack++;
+  if (soundTrack > soundTrackEnd) {
+    soundTrack = soundTrackStart;
+  }
+  soundPlay(soundTrack);
 }
 
 void ligaLed(int i, bool flag) {
@@ -1031,6 +1070,7 @@ void displayQuestion(int level) {
     romAddr = romAddr + fieldLength;
   }
 
+  soundStop();
   delay(1000);
   soundPlay(mp3Ind);
   waitConfirm(questDelay);
@@ -1103,6 +1143,13 @@ void displayQuestion(int level) {
   }
 
   waitConfirm(2000);
+
+  // toca a proxima musica
+  soundTrack++;
+  if (soundTrack > soundTrackEnd) {
+    soundTrack = soundTrackStart;
+  }
+  soundPlay(soundTrack);  
 }
 
 // espera pelo pressionamento do botão C, ou pelo tempo estipulado na variável timeWait,
@@ -1232,13 +1279,20 @@ void readEEPROM(int deviceromAddress, unsigned int eeromAddress, unsigned char* 
 }
 
 void soundPlay(int soundIndex) {
-  soundSetVolume(soundVolume);
-  Serial.write(0x7E);
-  Serial.write(0x04);
-  Serial.write(0xA0); // A0 for SD card
-  Serial.write((byte)0x00);
-  Serial.write(soundIndex); // track number
-  Serial.write(0x7E);
+  getSoundVolume();
+  Serial.print("soundVolume=");
+  Serial.println(soundVolume);
+  if (soundVolume > 0) {
+     soundSetVolume(soundVolume);
+     Serial.write(0x7E);
+     Serial.write(0x04);
+     Serial.write(0xA0); // A0 for SD card
+     Serial.write((byte)0x00);
+     Serial.write(soundIndex); // track number
+     Serial.write(0x7E);
+     Serial.print("soundIndex=");
+     Serial.println(soundIndex);
+  }
 }
 
 void soundPause() {
@@ -1269,8 +1323,6 @@ void soundSetVolume(int soundVolume) {
 
 void getSoundVolume() {
   static unsigned long lastTime = millis();
-  soundVolume = 30;
-  return;
   if (millis() - lastTime > 1000) {
     lastTime = millis();
     int sensorValue = analogRead(volPin);
@@ -1303,7 +1355,6 @@ void displayRomStr(unsigned int eepromAddress) {
 
   readEEPROM(eepromChip, eepromAddress, rdata, 20);
   strncpy(xdata, (char*)rdata, 20);
-  Serial.println(xdata);
 
   lcdDisplay(xdata, strAccents);
 }
